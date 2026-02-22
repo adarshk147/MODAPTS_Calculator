@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MODAPTS Standard Time Calculator</title>
+<!-- SheetJS for Excel export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  /* ── RESET & BASE ─────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #f0f4ff;
+    --panel:     #ffffff;
+    --panel2:    #eef2ff;
+    --border:    #c7d2fe;
+    --accent:    #4f46e5;
+    --accent2:   #f59e0b;
+    --green:     #16a34a;
+    --red:       #dc2626;
+    --text:      #1e1b4b;
+    --muted:     #6b7280;
+    --mono:      'JetBrains Mono', 'Courier New', monospace;
+    --sans:      'Inter', 'Segoe UI', sans-serif;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  .body-wrap {
+    display: flex;
+    flex: 1;
+  }
+
+  /* ── SIDEBAR ──────────────────────────────────────────────── */
+  .sidebar {
+    width: 270px;
+    min-width: 270px;
+    background: #ffffff;
+    border-right: 1px solid var(--border);
+    padding: 24px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    overflow-y: auto;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    box-shadow: 2px 0 8px rgba(79,70,229,0.06);
+  }
+
+  .sidebar-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: var(--accent);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 900; color: #fff;
+    font-family: var(--mono);
+  }
+
+  .logo-text { font-size: 13px; font-weight: 700; letter-spacing: 0.05em; line-height: 1.3; color: var(--text); }
+  .logo-sub  { font-size: 10px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+
+  .sidebar h3 {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 10px;
+  }
+
+  .ref-section { display: flex; flex-direction: column; gap: 6px; }
+
+  .ref-card {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+  }
+
+  .ref-card-header {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; font-weight: 700; margin-bottom: 8px; color: var(--text);
+  }
+
+  .code-badge {
+    font-family: var(--mono);
+    font-size: 11px; font-weight: 700;
+    padding: 2px 7px; border-radius: 4px;
+    background: var(--accent); color: #fff;
+  }
+  .code-badge.g { background: var(--green); }
+  .code-badge.p { background: var(--accent2); color: #000; }
+
+  .ref-table { width: 100%; border-collapse: collapse; }
+  .ref-table td {
+    padding: 2px 4px;
+    font-size: 11px;
+    font-family: var(--mono);
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+    color: var(--text);
+  }
+  .ref-table td:first-child { color: var(--accent); font-weight: 700; width: 40px; }
+  .ref-table tr:last-child td { border-bottom: none; }
+
+  .sidebar-note {
+    font-size: 11px; color: var(--muted); line-height: 1.6;
+    background: #fffbeb; border-left: 3px solid var(--accent2);
+    padding: 10px 12px; border-radius: 0 6px 6px 0;
+  }
+
+  /* ── MAIN ─────────────────────────────────────────────────── */
+  .main {
+    flex: 1;
+    padding: 28px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    overflow-x: auto;
+  }
+
+  .page-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .page-title { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; color: var(--text); }
+  .page-title span { color: var(--accent); }
+  .page-sub { font-size: 12px; color: var(--muted); margin-top: 3px; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 8px 16px; border-radius: 6px; border: none;
+    font-size: 12px; font-weight: 600; cursor: pointer;
+    letter-spacing: 0.03em; transition: all 0.15s; text-transform: uppercase;
+  }
+  .btn-primary  { background: var(--accent); color: #fff; }
+  .btn-primary:hover  { background: #4338ca; }
+  .btn-success  { background: var(--green); color: #fff; }
+  .btn-success:hover  { background: #15803d; }
+  .btn-danger   { background: transparent; border: 1px solid var(--red); color: var(--red); }
+  .btn-danger:hover   { background: var(--red); color: #fff; }
+  .btn-ghost    { background: var(--panel2); border: 1px solid var(--border); color: var(--text); }
+  .btn-ghost:hover    { border-color: var(--accent); color: var(--accent); }
+
+  /* ── DASHBOARD CARDS ──────────────────────────────────────── */
+  .dashboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px;
+  }
+
+  .stat-card {
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 1px 6px rgba(79,70,229,0.07);
+  }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 3px;
+    background: var(--accent);
+    border-radius: 10px 10px 0 0;
+  }
+  .stat-card.amber::before { background: var(--accent2); }
+  .stat-card.green::before { background: var(--green); }
+  .stat-card.red::before   { background: var(--red); }
+
+  .stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 6px; }
+  .stat-value { font-size: 28px; font-weight: 800; font-family: var(--mono); line-height: 1; color: var(--text); }
+  .stat-unit  { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+  /* ── ALLOWANCE SLIDER ─────────────────────────────────────── */
+  .controls-row {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    flex-wrap: wrap;
+    box-shadow: 0 1px 6px rgba(79,70,229,0.07);
+  }
+
+  .slider-group { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 260px; }
+  .slider-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; color: var(--text); }
+
+  input[type=range] {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--panel2);
+    outline: none;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--accent2);
+    border: 2px solid #fff;
+    cursor: pointer;
+  }
+
+  .slider-value {
+    font-family: var(--mono); font-weight: 700; font-size: 14px;
+    color: var(--accent2); min-width: 38px; text-align: right;
+  }
+
+  /* ── TABLE SECTION ────────────────────────────────────────── */
+  .section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap;
+  }
+
+  .section-title {
+    font-size: 13px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--muted);
+  }
+
+  .table-wrap {
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 1px 6px rgba(79,70,229,0.07);
+  }
+
+  table.task-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  table.task-table thead th {
+    background: var(--panel2);
+    padding: 11px 14px;
+    text-align: left;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    font-weight: 700;
+  }
+
+  table.task-table tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+  table.task-table tbody tr:last-child { border-bottom: none; }
+  table.task-table tbody tr:hover { background: #f5f3ff; }
+
+  table.task-table td { padding: 8px 10px; vertical-align: middle; }
+
+  .row-num {
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+    text-align: center; width: 36px;
+  }
+
+  table.task-table input, table.task-table select {
+    width: 100%;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 9px;
+    border-radius: 5px;
+    font-size: 13px;
+    font-family: var(--sans);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  table.task-table input:focus, table.task-table select:focus {
+    border-color: var(--accent);
+    background: #fff;
+  }
+  table.task-table input.code-input {
+    font-family: var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #7c3aed;
+  }
+  table.task-table input.code-input.invalid { border-color: var(--red); color: var(--red); }
+  table.task-table input.code-input.valid   { border-color: var(--green); }
+
+  table.task-table input[type=number] { width: 80px; text-align: right; font-family: var(--mono); }
+
+  .mods-cell, .time-cell {
+    font-family: var(--mono); font-size: 13px; text-align: right;
+    padding-right: 14px !important;
+  }
+  .mods-cell { color: var(--accent); font-weight: 600; }
+  .time-cell { color: var(--green); font-weight: 600; }
+
+  .del-btn {
+    background: none; border: none; cursor: pointer;
+    color: var(--muted); font-size: 16px; padding: 2px 6px;
+    border-radius: 4px; transition: all 0.15s; display: block; margin: auto;
+  }
+  .del-btn:hover { color: var(--red); background: rgba(220,38,38,0.08); }
+
+  /* ── EMPTY STATE ──────────────────────────────────────────── */
+  .empty-state {
+    text-align: center; padding: 48px 20px; color: var(--muted);
+  }
+  .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-state p { font-size: 13px; }
+
+  /* ── TOAST ────────────────────────────────────────────────── */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--green); color: #fff;
+    font-weight: 700; font-size: 13px;
+    padding: 12px 20px; border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    opacity: 0; transform: translateY(10px);
+    transition: all 0.3s; pointer-events: none; z-index: 999;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+
+  /* ── FOOTER ───────────────────────────────────────────────── */
+  footer {
+    background: #ffffff;
+    border-top: 1px solid var(--border);
+    padding: 14px 32px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+  }
+  footer strong { color: var(--accent); font-weight: 700; }
+
+  /* ── RESPONSIVE ───────────────────────────────────────────── */
+  @media (max-width: 760px) {
+    .sidebar { display: none; }
+    .main { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="body-wrap">
+
+<!-- ═══════════════════════ SIDEBAR ═══════════════════════ -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">M</div>
+    <div>
+      <div class="logo-text">MODAPTS</div>
+      <div class="logo-sub">Quick Reference</div>
+    </div>
+  </div>
+
+  <!-- M codes -->
+  <div class="ref-section">
+    <h3>M — Move</h3>
+    <div class="ref-card">
+      <div class="ref-card-header">
+        <span class="code-badge">M</span>
+        Body Member Movements
+      </div>
+      <table class="ref-table">
+        <tr><td>M1</td><td>1 MOD — Finger</td></tr>
+        <tr><td>M2</td><td>2 MODs — Hand / Wrist</td></tr>
+        <tr><td>M3</td><td>3 MODs — Lower Arm</td></tr>
+        <tr><td>M4</td><td>4 MODs — Full Arm</td></tr>
+        <tr><td>M5</td><td>5 MODs — Extended Arm</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- G codes -->
+  <div class="ref-section">
+    <h3>G — Get</h3>
+    <div class="ref-card">
+      <div class="ref-card-header">
+        <span class="code-badge g">G</span>
+        Grasp / Acquire
+      </div>
+      <table class="ref-table">
+        <tr><td>G0</td><td>0 MODs — Touch / No grasp</td></tr>
+        <tr><td>G1</td><td>1 MOD — Simple grasp</td></tr>
+        <tr><td>G3</td><td>3 MODs — Complex grasp</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- P codes -->
+  <div class="ref-section">
+    <h3>P — Put</h3>
+    <div class="ref-card">
+      <div class="ref-card-header">
+        <span class="code-badge p">P</span>
+        Place / Position
+      </div>
+      <table class="ref-table">
+        <tr><td>P0</td><td>0 MODs — No placement</td></tr>
+        <tr><td>P2</td><td>2 MODs — Approximate</td></tr>
+        <tr><td>P5</td><td>5 MODs — Careful placement</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- Other codes -->
+  <div class="ref-section">
+    <h3>Other Common Codes</h3>
+    <div class="ref-card">
+      <table class="ref-table">
+        <tr><td>R2</td><td>2 MODs — Re-grasp</td></tr>
+        <tr><td>D3</td><td>3 MODs — Disengage</td></tr>
+        <tr><td>A4</td><td>4 MODs — Apply pressure</td></tr>
+        <tr><td>F3</td><td>3 MODs — Foot motion</td></tr>
+        <tr><td>L1</td><td>1 MOD — Eye focus</td></tr>
+        <tr><td>V2</td><td>2 MODs — Visual control</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="sidebar-note">
+    <strong>1 MOD = 0.129 seconds</strong><br/>
+    Combine codes to form sequences:<br/>
+    <code style="color:#d97706">M3G3P5</code> = 3+3+5 = 11 MODs = 1.419 s
+  </div>
+</aside>
+
+<!-- ═══════════════════════ MAIN ═══════════════════════════ -->
+<main class="main">
+
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <div class="page-title">Standard Time <span>Calculator</span></div>
+      <div class="page-sub">MODAPTS · Modular Arrangement of Predetermined Time Standards</div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn btn-ghost" onclick="resetAll()">↺ Reset</button>
+      <button class="btn btn-success" onclick="exportExcel()">↓ Export Excel</button>
+    </div>
+  </div>
+
+  <!-- Dashboard -->
+  <div class="dashboard">
+    <div class="stat-card">
+      <div class="stat-label">Total Tasks</div>
+      <div class="stat-value" id="stat-tasks">0</div>
+      <div class="stat-unit">task rows</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total MODs</div>
+      <div class="stat-value" id="stat-mods">0</div>
+      <div class="stat-unit">modapts units</div>
+    </div>
+    <div class="stat-card amber">
+      <div class="stat-label">Base Time</div>
+      <div class="stat-value" id="stat-base">0.000</div>
+      <div class="stat-unit">seconds (no allowance)</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-label">Std. Time (s)</div>
+      <div class="stat-value" id="stat-seconds">0.000</div>
+      <div class="stat-unit">seconds (with allowance)</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-label">Std. Time (min)</div>
+      <div class="stat-value" id="stat-minutes">0.000</div>
+      <div class="stat-unit">minutes (with allowance)</div>
+    </div>
+  </div>
+
+  <!-- Allowance Slider -->
+  <div class="controls-row">
+    <div class="slider-group">
+      <div class="slider-label">⚙ Fatigue / Allowance</div>
+      <input type="range" id="allowance-slider" min="0" max="20" step="1" value="0" oninput="onSlider(this)"/>
+      <div class="slider-value" id="allowance-display">0%</div>
+    </div>
+    <div style="font-size:11px;color:var(--muted);max-width:320px;line-height:1.5;">
+      Adds a percentage buffer to total standard time to account for fatigue, personal needs, and unavoidable delays (PF&amp;D).
+    </div>
+  </div>
+
+  <!-- Task Table -->
+  <div>
+    <div class="section-header" style="margin-bottom:12px;">
+      <div class="section-title">Task Breakdown</div>
+      <button class="btn btn-primary" onclick="addRow()">+ Add Task</button>
+    </div>
+
+    <div class="table-wrap">
+      <table class="task-table" id="task-table">
+        <thead>
+          <tr>
+            <th style="width:36px;">#</th>
+            <th>Task Description</th>
+            <th style="width:160px;">MODAPTS Code</th>
+            <th style="width:90px;">Frequency</th>
+            <th style="width:90px;">MODs</th>
+            <th style="width:110px;">Time (s)</th>
+            <th style="width:44px;"></th>
+          </tr>
+        </thead>
+        <tbody id="task-body">
+        </tbody>
+      </table>
+      <div id="empty-state" class="empty-state" style="display:none;">
+        <div class="icon">📋</div>
+        <p>No tasks yet. Click <strong>+ Add Task</strong> to begin.</p>
+      </div>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<!-- Footer -->
+<footer>
+  Created by <strong>Adarsh Kulkarni</strong> — Manufacturing Engineer
+</footer>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+const MOD_VALUE = 0.129;
+let rows = [];
+let allowancePct = 0;
+let nextId = 1;
+
+function parseMODS(code) {
+  if (!code || code.trim() === '') return { mods: 0, valid: false };
+  const clean = code.trim().toUpperCase();
+  const tokens = [...clean.matchAll(/([A-Z])(\d+\.?\d*)/g)];
+  if (tokens.length === 0) return { mods: 0, valid: false };
+  const total = tokens.reduce((sum, t) => sum + parseFloat(t[2]), 0);
+  return { mods: total, valid: true };
+}
+
+function addRow(desc='', code='', freq=1) {
+  rows.push({ id: nextId++, desc, code, freq });
+  renderTable();
+  recalc();
+}
+
+function deleteRow(id) {
+  rows = rows.filter(r => r.id !== id);
+  renderTable();
+  recalc();
+}
+
+function resetAll() {
+  if (rows.length && !confirm('Clear all tasks?')) return;
+  rows = [];
+  document.getElementById('allowance-slider').value = 0;
+  allowancePct = 0;
+  document.getElementById('allowance-display').textContent = '0%';
+  renderTable();
+  recalc();
+}
+
+function renderTable() {
+  const tbody = document.getElementById('task-body');
+  const empty = document.getElementById('empty-state');
+  if (rows.length === 0) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  tbody.innerHTML = rows.map((r, idx) => {
+    const parsed = parseMODS(r.code);
+    const freq   = Math.max(1, parseFloat(r.freq) || 1);
+    const mods   = parsed.valid ? (parsed.mods * freq) : 0;
+    const secs   = (mods * MOD_VALUE).toFixed(3);
+    const codeClass = r.code.trim() === '' ? '' : (parsed.valid ? 'valid' : 'invalid');
+    return `
+      <tr data-id="${r.id}">
+        <td class="row-num">${idx + 1}</td>
+        <td><input type="text" placeholder="e.g. Pick up bolt" value="${escHtml(r.desc)}" oninput="updateField(${r.id},'desc',this.value)" /></td>
+        <td><input type="text" class="code-input ${codeClass}" placeholder="e.g. M3G3" value="${escHtml(r.code)}" oninput="updateCode(${r.id},this)" /></td>
+        <td><input type="number" min="1" step="1" value="${freq}" oninput="updateField(${r.id},'freq',this.value)" /></td>
+        <td class="mods-cell">${parsed.valid ? mods.toFixed(1) : '—'}</td>
+        <td class="time-cell">${parsed.valid ? secs : '—'}</td>
+        <td><button class="del-btn" onclick="deleteRow(${r.id})" title="Delete">✕</button></td>
+      </tr>`;
+  }).join('');
+}
+
+function updateField(id, field, val) {
+  const row = rows.find(r => r.id === id);
+  if (row) { row[field] = val; recalc(); }
+}
+
+function updateCode(id, input) {
+  const val = input.value;
+  const row = rows.find(r => r.id === id);
+  if (!row) return;
+  row.code = val;
+  const parsed = parseMODS(val);
+  input.className = 'code-input ' + (val.trim() === '' ? '' : (parsed.valid ? 'valid' : 'invalid'));
+  const tr = input.closest('tr');
+  if (!tr) return;
+  const cells = tr.querySelectorAll('td');
+  const freq = Math.max(1, parseFloat(row.freq) || 1);
+  const mods = parsed.valid ? (parsed.mods * freq) : 0;
+  const secs = (mods * MOD_VALUE).toFixed(3);
+  cells[4].textContent = parsed.valid ? mods.toFixed(1) : '—';
+  cells[5].textContent = parsed.valid ? secs : '—';
+  recalc();
+}
+
+function recalc() {
+  let totalMods = 0;
+  rows.forEach(r => {
+    const parsed = parseMODS(r.code);
+    if (!parsed.valid) return;
+    const freq = Math.max(1, parseFloat(r.freq) || 1);
+    totalMods += parsed.mods * freq;
+  });
+  const baseTime = totalMods * MOD_VALUE;
+  const factor   = 1 + allowancePct / 100;
+  const stdTime  = baseTime * factor;
+  document.getElementById('stat-tasks').textContent   = rows.length;
+  document.getElementById('stat-mods').textContent    = totalMods.toFixed(1);
+  document.getElementById('stat-base').textContent    = baseTime.toFixed(3);
+  document.getElementById('stat-seconds').textContent = stdTime.toFixed(3);
+  document.getElementById('stat-minutes').textContent = (stdTime / 60).toFixed(4);
+}
+
+function onSlider(el) {
+  allowancePct = parseInt(el.value);
+  document.getElementById('allowance-display').textContent = allowancePct + '%';
+  recalc();
+}
+
+// ── EXPORT EXCEL ────────────────────────────────────────────
+function exportExcel() {
+  const wb = XLSX.utils.book_new();
+
+  // Task data
+  const taskData = [['Task #', 'Description', 'MODAPTS Code', 'Frequency', 'MODs', 'Time (s)']];
+  rows.forEach((r, idx) => {
+    const parsed = parseMODS(r.code);
+    const freq   = Math.max(1, parseFloat(r.freq) || 1);
+    const mods   = parsed.valid ? parseFloat((parsed.mods * freq).toFixed(1)) : 'INVALID';
+    const secs   = parsed.valid ? parseFloat((parsed.mods * freq * MOD_VALUE).toFixed(3)) : 'INVALID';
+    taskData.push([idx + 1, r.desc, r.code, freq, mods, secs]);
+  });
+
+  // Summary
+  const totalMods = rows.reduce((s, r) => {
+    const p = parseMODS(r.code);
+    return s + (p.valid ? p.mods * Math.max(1, parseFloat(r.freq) || 1) : 0);
+  }, 0);
+  const baseTime = totalMods * MOD_VALUE;
+  const stdTime  = baseTime * (1 + allowancePct / 100);
+
+  taskData.push([]);
+  taskData.push(['SUMMARY']);
+  taskData.push(['Total MODs', parseFloat(totalMods.toFixed(1))]);
+  taskData.push(['Base Time (s)', parseFloat(baseTime.toFixed(3))]);
+  taskData.push(['Allowance %', allowancePct + '%']);
+  taskData.push(['Standard Time (s)', parseFloat(stdTime.toFixed(3))]);
+  taskData.push(['Standard Time (min)', parseFloat((stdTime / 60).toFixed(4))]);
+  taskData.push(['Generated', new Date().toLocaleString()]);
+  taskData.push(['Created by', 'Adarsh Kulkarni — Manufacturing Engineer']);
+
+  const ws = XLSX.utils.aoa_to_sheet(taskData);
+
+  // Column widths
+  ws['!cols'] = [
+    { wch: 8 }, { wch: 30 }, { wch: 16 }, { wch: 12 }, { wch: 10 }, { wch: 12 }
+  ];
+
+  XLSX.utils.book_append_sheet(wb, ws, 'MODAPTS Analysis');
+  XLSX.writeFile(wb, `MODAPTS_${new Date().toISOString().slice(0,10)}.xlsx`);
+  showToast('✓ Exported to Excel');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Init
+addRow('Reach to parts bin',     'M3',    1);
+addRow('Pick up bolt',           'G1',    1);
+addRow('Move bolt to fixture',   'M3P5',  1);
+addRow('Release and withdraw',   'G0M2',  1);
+addRow('Tighten with finger',    'M1G1',  4);
+</script>
+</body>
+</html>
